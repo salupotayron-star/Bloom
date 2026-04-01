@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fleurs Éternelles — Le Jeu du Jardinier</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: linear-gradient(160deg, #081830 0%, #0d2548 50%, #163660 100%);
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-family: 'Lato', sans-serif;
+  user-select: none;
+}
+
+.petal { position:fixed; border-radius:50% 0 50% 0; opacity:0; pointer-events:none; animation: floatUp linear infinite; }
+@keyframes floatUp {
+  0%   { transform: translateY(105vh) rotate(0deg);   opacity:0; }
+  5%   { opacity: 0.2; }
+  95%  { opacity: 0.1; }
+  100% { transform: translateY(-5vh)  rotate(600deg); opacity:0; }
+}
+
+#wrap {
+  display:flex; flex-direction:column; align-items:center; gap:14px;
+  padding: 20px 12px;
+}
+
+.brand-title {
+  font-family:'Playfair Display',serif; font-size:28px; font-weight:600;
+  color:#fff; letter-spacing:2px; text-align:center;
+}
+.brand-title em { color:#c9a84c; font-style:normal; }
+.brand-sub {
+  font-size:11px; font-weight:300; color:rgba(255,255,255,0.5);
+  letter-spacing:4px; text-transform:uppercase; text-align:center; margin-top:2px;
+}
+.challenge {
+  font-size:12px; color:rgba(255,255,255,0.7);
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.13);
+  border-radius:20px; padding:5px 16px; text-align:center;
+}
+
+.stats { display:flex; gap:12px; }
+.pill {
+  background:rgba(255,255,255,0.09); border:1px solid rgba(255,255,255,0.18);
+  border-radius:30px; padding:7px 20px;
+  font-size:14px; font-weight:700; color:#fff;
+  min-width:115px; text-align:center; transition:background .25s;
+}
+.pill.flash { background:rgba(201,168,76,0.35); }
+
+#frame {
+  border-radius:16px; padding:3px;
+  background:linear-gradient(135deg,rgba(255,255,255,0.22),rgba(255,255,255,0.04));
+  box-shadow: 0 20px 60px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.08);
+}
+canvas { display:block; border-radius:13px; }
+
+.btns { display:flex; gap:10px; }
+.btn {
+  font-family:'Lato',sans-serif; font-size:13px; font-weight:700;
+  letter-spacing:1.2px; text-transform:uppercase;
+  padding:10px 26px; border-radius:30px; border:none; cursor:pointer;
+  transition:transform .12s, box-shadow .12s;
+}
+.btn:active { transform:scale(0.96); }
+.btn-main {
+  background:linear-gradient(135deg,#1e78d4,#0a3d6b);
+  color:#fff; box-shadow:0 4px 18px rgba(30,120,212,0.4);
+}
+.btn-main:hover { box-shadow:0 6px 26px rgba(30,120,212,0.6); transform:translateY(-1px); }
+.btn-ghost {
+  background:rgba(255,255,255,0.07); color:rgba(255,255,255,0.8);
+  border:1px solid rgba(255,255,255,0.18);
+}
+.btn-ghost:hover { background:rgba(255,255,255,0.13); }
+
+.dpad { display:grid; grid-template-columns:repeat(3,44px); gap:5px; }
+.dp {
+  width:44px; height:44px;
+  background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.18);
+  border-radius:10px; display:flex; align-items:center; justify-content:center;
+  cursor:pointer; color:rgba(255,255,255,0.85); font-size:18px;
+}
+.dp:active { background:rgba(255,255,255,0.22); }
+
+#modal {
+  display:none; position:fixed; inset:0; z-index:50;
+  background:rgba(5,14,35,0.88); backdrop-filter:blur(10px);
+  align-items:center; justify-content:center;
+}
+#modal.on { display:flex; }
+.mcard {
+  background:linear-gradient(155deg,#0d2548,#1565a8);
+  border:1px solid rgba(255,255,255,0.18); border-radius:24px;
+  padding:40px 44px; text-align:center; max-width:400px; width:90%;
+  animation:popIn .45s cubic-bezier(.34,1.56,.64,1);
+  box-shadow:0 30px 80px rgba(0,0,0,0.6);
+}
+@keyframes popIn {
+  from { transform:scale(.55) translateY(30px); opacity:0; }
+  to   { transform:scale(1)   translateY(0);    opacity:1; }
+}
+.trophy-icon { font-size:54px; display:block; margin-bottom:10px; }
+.mtitle { font-family:'Playfair Display',serif; font-size:24px; color:#fff; margin-bottom:5px; }
+.msub { font-size:13px; color:rgba(255,255,255,0.6); margin-bottom:20px; }
+.mcode {
+  font-family:'Playfair Display',serif; font-size:34px; font-weight:600;
+  color:#c9a84c; letter-spacing:6px;
+  background:rgba(201,168,76,0.1); border:2px dashed rgba(201,168,76,0.45);
+  border-radius:12px; padding:12px 28px; display:inline-block; margin-bottom:10px;
+}
+.mnote { font-size:12px; color:rgba(255,255,255,0.45); margin-bottom:22px; }
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <div>
+    <div class="brand-title">Fleurs <em>Éternelles</em></div>
+    <div class="brand-sub">Le jeu du jardinier</div>
+  </div>
+  <div class="challenge">🌸 Collecte 50 fleurs en 5 min · Gagne -10%</div>
+  <div class="stats">
+    <div class="pill" id="sc">🌸 0 / 50</div>
+    <div class="pill" id="tm">⏱ 5:00</div>
+  </div>
+  <div id="frame"><canvas id="c"></canvas></div>
+  <div class="btns">
+    <button class="btn btn-main" id="btnStart">▶ Jouer</button>
+    <button class="btn btn-ghost" id="btnPause" style="display:none">⏸ Pause</button>
+  </div>
+  <div class="dpad">
+    <div></div><div class="dp" id="dU">↑</div><div></div>
+    <div class="dp" id="dL">←</div><div class="dp" id="dD">↓</div><div class="dp" id="dR">→</div>
+  </div>
+</div>
+
+<div id="modal">
+  <div class="mcard">
+    <span class="trophy-icon">🏆</span>
+    <div class="mtitle">Bravo, maître jardinier !</div>
+    <div class="msub">Tu as récolté 50 fleurs éternelles.<br>Voici ta récompense exclusive :</div>
+    <div class="mcode">FLEUR10</div>
+    <div class="mnote">-10% sur ta prochaine commande · Valable 30 jours</div>
+    <button class="btn btn-main" id="btnReplay">🌸 Rejouer</button>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────
+const COLS      = 22;
+const CELL      = 22;
+const SIZE      = COLS * CELL;
+const STEP_MS   = 115;
+const TOTAL_SEC = 300;
+const WIN_COUNT = 50;
+const PETAL_COLS= ['#e8789c','#e07b3a','#8e5fb5','#d4b800','#2ecc71','#e84c4c'];
+
+// ─── CANVAS ───────────────────────────────────────────
+const canvas = document.getElementById('c');
+canvas.width = canvas.height = SIZE;
+const ctx = canvas.getContext('2d');
+
+// ─── FLOATING PETALS ──────────────────────────────────
+for (let i = 0; i < 20; i++) {
+  const el = document.createElement('div');
+  el.className = 'petal';
+  const s = 6 + Math.random() * 9;
+  el.style.cssText = `width:${s}px;height:${s}px;left:${Math.random()*100}%;background:${PETAL_COLS[i%PETAL_COLS.length]};animation-duration:${9+Math.random()*11}s;animation-delay:${-Math.random()*14}s;`;
+  document.body.appendChild(el);
+}
+
+// ─── STATE ────────────────────────────────────────────
+let state = 'splash'; // splash | playing | paused | dead | win
+let snake = [], dir = {x:1,y:0}, nextDir = {x:1,y:0};
+let flowers = [], score = 0, timeLeft = TOTAL_SEC;
+let rafId = null, lastStepTs = 0, lastSecTs = 0;
+
+// ─── HELPERS ──────────────────────────────────────────
+function makeFlower() {
+  let p;
+  do {
+    p = { x: Math.floor(Math.random()*COLS), y: Math.floor(Math.random()*COLS) };
+  } while (
+    snake.some(s => s.x===p.x && s.y===p.y) ||
+    flowers.some(f => f.x===p.x && f.y===p.y)
+  );
+  return { ...p, ci: Math.floor(Math.random()*PETAL_COLS.length), ph: Math.random()*Math.PI*2 };
+}
+
+function initGame() {
+  snake   = [{x:11,y:11},{x:10,y:11},{x:9,y:11},{x:8,y:11}];
+  dir     = {x:1,y:0};
+  nextDir = {x:1,y:0};
+  score   = 0;
+  timeLeft= TOTAL_SEC;
+  flowers = [];
+  flowers.push(makeFlower());
+  flowers.push(makeFlower());
+  updateHUD();
+}
+
+// ─── HUD ──────────────────────────────────────────────
+function updateHUD() {
+  document.getElementById('sc').textContent = '🌸 '+score+' / '+WIN_COUNT;
+  const m=Math.floor(timeLeft/60), s=timeLeft%60;
+  document.getElementById('tm').textContent = '⏱ '+m+':'+(s<10?'0':'')+s;
+}
+function flashHUD() {
+  const el=document.getElementById('sc');
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  setTimeout(()=>el.classList.remove('flash'), 300);
+}
+
+// ─── DRAW: BACKGROUND ─────────────────────────────────
+function drawBG() {
+  const bg=ctx.createLinearGradient(0,0,SIZE,SIZE);
+  bg.addColorStop(0,'#0b1e3a'); bg.addColorStop(1,'#091529');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,SIZE,SIZE);
+  ctx.strokeStyle='rgba(255,255,255,0.03)'; ctx.lineWidth=1;
+  for(let i=0;i<=COLS;i++){
+    ctx.beginPath(); ctx.moveTo(i*CELL,0); ctx.lineTo(i*CELL,SIZE); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,i*CELL); ctx.lineTo(SIZE,i*CELL); ctx.stroke();
+  }
+  const gl=ctx.createRadialGradient(SIZE/2,SIZE/2,0,SIZE/2,SIZE/2,SIZE*0.55);
+  gl.addColorStop(0,'rgba(21,101,168,0.12)'); gl.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=gl; ctx.fillRect(0,0,SIZE,SIZE);
+}
+
+// ─── DRAW: FLOWER ─────────────────────────────────────
+function drawFlower(f, ts) {
+  const cx=f.x*CELL+CELL/2, cy=f.y*CELL+CELL/2;
+  const wb=1+Math.sin(ts*0.002+f.ph)*0.07;
+  const col=PETAL_COLS[f.ci];
+  ctx.save(); ctx.translate(cx,cy); ctx.scale(wb,wb);
+  // stem
+  ctx.strokeStyle='#2e7d52'; ctx.lineWidth=1.8; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(0,CELL*0.12); ctx.lineTo(0,CELL*0.42); ctx.stroke();
+  // outer petals
+  for(let i=0;i<6;i++){
+    const a=(i/6)*Math.PI*2+ts*0.0004;
+    ctx.fillStyle=col; ctx.globalAlpha=0.88;
+    ctx.beginPath();
+    ctx.ellipse(Math.cos(a)*CELL*0.26,Math.sin(a)*CELL*0.26,CELL*0.14,CELL*0.09,a,0,Math.PI*2);
+    ctx.fill();
+  }
+  // inner petals
+  for(let i=0;i<6;i++){
+    const a=(i/6)*Math.PI*2+Math.PI/6+ts*0.0004;
+    ctx.fillStyle=col; ctx.globalAlpha=0.48;
+    ctx.beginPath();
+    ctx.ellipse(Math.cos(a)*CELL*0.15,Math.sin(a)*CELL*0.15,CELL*0.09,CELL*0.06,a,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  // center
+  const cg=ctx.createRadialGradient(0,0,0,0,0,CELL*0.15);
+  cg.addColorStop(0,'#ffe566'); cg.addColorStop(1,'#c8860a');
+  ctx.fillStyle=cg; ctx.shadowColor='rgba(255,220,50,0.5)'; ctx.shadowBlur=7;
+  ctx.beginPath(); ctx.arc(0,0,CELL*0.14,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#7a4800';
+  ctx.beginPath(); ctx.arc(0,0,CELL*0.06,0,Math.PI*2); ctx.fill();
+  // sparkles
+  ctx.fillStyle='rgba(255,255,255,0.7)';
+  for(let i=0;i<4;i++){
+    const a=(i/4)*Math.PI*2+ts*0.003;
+    ctx.beginPath(); ctx.arc(Math.cos(a)*CELL*0.1,Math.sin(a)*CELL*0.1,1.2,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ─── DRAW: BODY SEGMENT ───────────────────────────────
+function drawSeg(seg, i, total) {
+  const t=i/total;
+  ctx.globalAlpha=0.9-t*0.35;
+  ctx.fillStyle=`rgb(${Math.round(21+t*8)},${Math.round(101+t*38)},${Math.round(168-t*28)})`;
+  ctx.shadowColor='rgba(0,0,0,0.3)'; ctx.shadowBlur=4;
+  ctx.beginPath();
+  ctx.roundRect(seg.x*CELL+2,seg.y*CELL+2,CELL-4,CELL-4,5);
+  ctx.fill(); ctx.shadowBlur=0;
+  if(i%3===0&&i>0){
+    ctx.fillStyle='#1a6b3c';
+    ctx.save();
+    ctx.translate(seg.x*CELL+CELL/2,seg.y*CELL+CELL/2);
+    ctx.rotate(i*1.1);
+    ctx.beginPath(); ctx.ellipse(0,0,CELL*0.3,CELL*0.14,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.22)'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.moveTo(-CELL*0.27,0); ctx.lineTo(CELL*0.27,0); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.globalAlpha=1;
+}
+
+// ─── DRAW: MINI FLOWER (decoration) ───────────────────
+function miniFlower(ox,oy,col,r){
+  for(let i=0;i<5;i++){
+    const a=(i/5)*Math.PI*2;
+    ctx.fillStyle=col;
+    ctx.beginPath();
+    ctx.ellipse(ox+Math.cos(a)*r*1.6,oy+Math.sin(a)*r*1.6,r,r*0.6,a,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.fillStyle='#ffd700';
+  ctx.beginPath(); ctx.arc(ox,oy,r*0.7,0,Math.PI*2); ctx.fill();
+}
+
+// ─── DRAW: GARDENER HEAD ──────────────────────────────
+function drawGardener(seg, d) {
+  const cx=seg.x*CELL+CELL/2, cy=seg.y*CELL+CELL/2;
+  ctx.save(); ctx.translate(cx,cy);
+  const angle = d.x===1?0 : d.x===-1?Math.PI : d.y===1?Math.PI/2 : -Math.PI/2;
+  ctx.rotate(angle);
+  const h=CELL*0.5;
+
+  // body
+  ctx.shadowColor='rgba(0,0,0,0.45)'; ctx.shadowBlur=7;
+  ctx.fillStyle='#1565a8';
+  ctx.beginPath(); ctx.roundRect(-h*0.72,h*0.38,h*1.44,h*0.82,[3,3,7,7]); ctx.fill();
+  ctx.shadowBlur=0;
+  // lapels
+  ctx.fillStyle='#0a3d6b';
+  ctx.beginPath(); ctx.moveTo(-h*0.1,h*0.38); ctx.lineTo(-h*0.38,h*0.65); ctx.lineTo(-h*0.1,h*0.58); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo( h*0.1,h*0.38); ctx.lineTo( h*0.38,h*0.65); ctx.lineTo( h*0.1,h*0.58); ctx.closePath(); ctx.fill();
+  // pocket flower
+  miniFlower(h*0.38,h*0.56,'#e8789c',h*0.12);
+
+  // neck
+  ctx.fillStyle='#f0b882';
+  ctx.fillRect(-h*0.18,h*0.28,h*0.36,h*0.14);
+
+  // hat brim
+  ctx.shadowColor='rgba(0,0,0,0.4)'; ctx.shadowBlur=5;
+  ctx.fillStyle='#1a5c38';
+  ctx.beginPath(); ctx.ellipse(0,-h*0.48,h*0.58,h*0.17,0,0,Math.PI*2); ctx.fill();
+  // hat crown
+  ctx.fillStyle='#236b42';
+  ctx.beginPath(); ctx.roundRect(-h*0.38,-h*1.12,h*0.76,h*0.68,[7,7,0,0]); ctx.fill();
+  ctx.shadowBlur=0;
+  // ribbon
+  ctx.fillStyle='#c9a84c';
+  ctx.fillRect(-h*0.38,-h*0.52,h*0.76,h*0.09);
+  // hat flower
+  miniFlower(h*0.22,-h*0.44,'#e8789c',h*0.13);
+
+  // face
+  ctx.shadowColor='rgba(0,0,0,0.25)'; ctx.shadowBlur=5;
+  ctx.fillStyle='#f5c99a';
+  ctx.beginPath(); ctx.ellipse(0,h*0.06,h*0.38,h*0.4,0,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0;
+  // blush
+  ctx.fillStyle='rgba(230,100,100,0.2)';
+  ctx.beginPath(); ctx.ellipse(-h*0.2,h*0.18,h*0.14,h*0.09,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( h*0.2,h*0.18,h*0.14,h*0.09,0,0,Math.PI*2); ctx.fill();
+  // eye whites
+  ctx.fillStyle='#fff';
+  ctx.beginPath(); ctx.ellipse(-h*0.16,h*0.02,h*0.1,h*0.12,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( h*0.16,h*0.02,h*0.1,h*0.12,0,0,Math.PI*2); ctx.fill();
+  // pupils
+  ctx.fillStyle='#1a1a2e';
+  ctx.beginPath(); ctx.ellipse(-h*0.16,h*0.04,h*0.065,h*0.08,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( h*0.16,h*0.04,h*0.065,h*0.08,0,0,Math.PI*2); ctx.fill();
+  // shine
+  ctx.fillStyle='#fff';
+  ctx.beginPath(); ctx.arc(-h*0.12,-h*0.01,h*0.028,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc( h*0.20,-h*0.01,h*0.028,0,Math.PI*2); ctx.fill();
+  // eyebrows
+  ctx.strokeStyle='#7a4a1e'; ctx.lineWidth=1.6; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(-h*0.28,-h*0.14); ctx.quadraticCurveTo(-h*0.16,-h*0.23,-h*0.04,-h*0.14); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo( h*0.04,-h*0.14); ctx.quadraticCurveTo( h*0.16,-h*0.23, h*0.28,-h*0.14); ctx.stroke();
+  // nose
+  ctx.fillStyle='#d4956a';
+  ctx.beginPath(); ctx.ellipse(0,h*0.1,h*0.055,h*0.04,0,0,Math.PI*2); ctx.fill();
+  // moustache
+  ctx.fillStyle='#8b5e2a';
+  ctx.beginPath(); ctx.ellipse(-h*0.1,h*0.2,h*0.12,h*0.045,-0.25,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse( h*0.1,h*0.2,h*0.12,h*0.045, 0.25,0,Math.PI*2); ctx.fill();
+  // smile
+  ctx.strokeStyle='#c07040'; ctx.lineWidth=1.8; ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(0,h*0.15,h*0.18,0.2,Math.PI-0.2); ctx.stroke();
+
+  ctx.restore();
+}
+
+// ─── DRAW: FULL FRAME ─────────────────────────────────
+function drawFrame(ts) {
+  drawBG();
+  for(let i=snake.length-1;i>=1;i--) drawSeg(snake[i],i,snake.length);
+  drawGardener(snake[0], dir);
+  flowers.forEach(f=>drawFlower(f,ts));
+}
+
+// ─── DRAW: SPLASH ─────────────────────────────────────
+function drawSplash(ts) {
+  drawBG();
+  ctx.save(); ctx.translate(SIZE/2,SIZE/2-55);
+  const sc=1+Math.sin(ts*0.002)*0.07; ctx.scale(sc,sc);
+  for(let i=0;i<7;i++){
+    const a=(i/7)*Math.PI*2;
+    ctx.fillStyle=PETAL_COLS[i%PETAL_COLS.length]; ctx.globalAlpha=0.88;
+    ctx.beginPath(); ctx.ellipse(Math.cos(a)*22,Math.sin(a)*22,12,7,a,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  ctx.fillStyle='#ffd700'; ctx.shadowColor='rgba(255,210,0,0.5)'; ctx.shadowBlur=10;
+  ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*2); ctx.fill();
+  ctx.shadowBlur=0; ctx.restore();
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='rgba(255,255,255,0.92)';
+  ctx.font='600 22px "Playfair Display",serif';
+  ctx.fillText('Prêt à jardiner ?',SIZE/2,SIZE/2+10);
+  ctx.font='300 13px Lato,sans-serif';
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.fillText('Appuie sur Jouer pour commencer',SIZE/2,SIZE/2+36);
+}
+
+// ─── DRAW: OVERLAY ────────────────────────────────────
+function drawOverlay(l1, l2, hint) {
+  ctx.fillStyle='rgba(5,14,35,0.8)'; ctx.fillRect(0,0,SIZE,SIZE);
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#fff'; ctx.font='500 18px "Playfair Display",serif';
+  ctx.fillText(l1,SIZE/2,SIZE/2-20);
+  ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='300 13px Lato,sans-serif';
+  ctx.fillText(l2,SIZE/2,SIZE/2+8);
+  if(hint){
+    ctx.fillStyle='rgba(201,168,76,0.75)'; ctx.font='300 12px Lato,sans-serif';
+    ctx.fillText(hint,SIZE/2,SIZE/2+34);
+  }
+}
+
+// ─── GAME STEP ────────────────────────────────────────
+function step() {
+  dir = { x:nextDir.x, y:nextDir.y };
+  const head = {
+    x: (snake[0].x + dir.x + COLS) % COLS,
+    y: (snake[0].y + dir.y + COLS) % COLS
+  };
+  if (snake.some(s=>s.x===head.x&&s.y===head.y)) { state='dead'; return; }
+  snake.unshift(head);
+  const fi = flowers.findIndex(f=>f.x===head.x&&f.y===head.y);
+  if (fi !== -1) {
+    score++; flashHUD(); updateHUD();
+    if (score >= WIN_COUNT) { state='win'; return; }
+    flowers[fi] = makeFlower();
+  } else {
+    snake.pop();
+  }
+}
+
+// ─── MAIN LOOP ────────────────────────────────────────
+function loop(ts) {
+  rafId = requestAnimationFrame(loop);
+
+  if (state === 'splash') { drawSplash(ts); return; }
+
+  if (state === 'playing') {
+    if (lastStepTs === 0) lastStepTs = ts;
+    if (lastSecTs  === 0) lastSecTs  = ts;
+    if (ts - lastStepTs >= STEP_MS) { lastStepTs += STEP_MS; step(); }
+    if (ts - lastSecTs  >= 1000)    {
+      lastSecTs += 1000;
+      timeLeft = Math.max(0, timeLeft-1);
+      updateHUD();
+      if (timeLeft === 0) state = 'dead';
+    }
+  }
+
+  if (state === 'playing') { drawFrame(ts); return; }
+
+  if (state === 'paused') {
+    drawFrame(ts);
+    drawOverlay('⏸  Pause','Appuie sur Reprendre','');
+    return;
+  }
+
+  if (state === 'dead') {
+    drawFrame(ts);
+    const msg = timeLeft===0 ? 'Temps écoulé !' : "Le jardinier s'est perdu !";
+    drawOverlay(msg,'Tu as collecté '+score+' / '+WIN_COUNT+' fleurs','Appuie sur Recommencer');
+    cancelAnimationFrame(rafId); rafId=null;
+    return;
+  }
+
+  if (state === 'win') {
+    drawFrame(ts);
+    cancelAnimationFrame(rafId); rafId=null;
+    document.getElementById('modal').classList.add('on');
+    return;
+  }
+}
+
+// ─── START ────────────────────────────────────────────
+function startGame() {
+  initGame();
+  state = 'playing';
+  lastStepTs = 0; lastSecTs = 0;
+  document.getElementById('btnPause').style.display='inline-block';
+  document.getElementById('btnPause').textContent='⏸ Pause';
+  document.getElementById('btnStart').textContent='↺ Recommencer';
+  document.getElementById('modal').classList.remove('on');
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(loop);
+}
+
+// ─── BUTTONS ──────────────────────────────────────────
+document.getElementById('btnStart').onclick  = startGame;
+document.getElementById('btnReplay').onclick = startGame;
+document.getElementById('btnPause').onclick  = () => {
+  if (state==='playing') {
+    state='paused';
+    document.getElementById('btnPause').textContent='▶ Reprendre';
+  } else if (state==='paused') {
+    state='playing';
+    lastSecTs=0;
+    document.getElementById('btnPause').textContent='⏸ Pause';
+  }
+};
+
+// ─── KEYBOARD ─────────────────────────────────────────
+const KEYS={ArrowUp:{x:0,y:-1},ArrowDown:{x:0,y:1},ArrowLeft:{x:-1,y:0},ArrowRight:{x:1,y:0}};
+document.addEventListener('keydown', e=>{
+  if (!KEYS[e.key]) return;
+  e.preventDefault();
+  const d=KEYS[e.key];
+  if (d.x !== -dir.x || d.y !== -dir.y) nextDir=d;
+});
+
+// ─── D-PAD ────────────────────────────────────────────
+function tryDir(d){ if(d.x !== -dir.x || d.y !== -dir.y) nextDir=d; }
+document.getElementById('dU').onclick=()=>tryDir({x:0,y:-1});
+document.getElementById('dD').onclick=()=>tryDir({x:0,y:1});
+document.getElementById('dL').onclick=()=>tryDir({x:-1,y:0});
+document.getElementById('dR').onclick=()=>tryDir({x:1,y:0});
+
+// ─── BOOT ─────────────────────────────────────────────
+rafId = requestAnimationFrame(loop);
+</script>
+</body>
+</html>
